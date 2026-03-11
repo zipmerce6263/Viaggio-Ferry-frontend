@@ -4,7 +4,7 @@
  */
 
 // const API_BASE_URL ="http://localhost:3001"
-const API_BASE_URL = process.env.REACT_APP_API_BASE_URL
+const API_BASE_URL = process.env.REACT_APP_API_BASE_URL || "http://localhost:3001"
 
 // Custom event for triggering logout across the app
 export const AUTH_LOGOUT_EVENT = "auth:logout"

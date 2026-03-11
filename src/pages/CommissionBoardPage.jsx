@@ -424,12 +424,30 @@ export default function CommissionBoardPage() {
     console.log("[v0] Opening rule details for ID:", ruleId);
     setSelectedRuleId(ruleId);
     
-    // Show modal
-    const modalElement = document.getElementById("ruleDetailsModal");
-    if (modalElement) {
-      const modal = new window.bootstrap.Modal(modalElement);
-      modal.show();
-    }
+    // Show modal with a small delay to ensure state is updated
+    setTimeout(() => {
+      const modalElement = document.getElementById("ruleDetailsModal");
+      console.log("[v0] Modal element found:", !!modalElement);
+      
+      if (modalElement) {
+        try {
+          // Destroy any existing modal instance
+          const existingModal = window.bootstrap.Modal.getInstance(modalElement);
+          if (existingModal) {
+            existingModal.dispose();
+          }
+          
+          // Create new modal instance and show it
+          const modal = new window.bootstrap.Modal(modalElement);
+          modal.show();
+          console.log("[v0] Modal shown successfully");
+        } catch (err) {
+          console.error("[v0] Error showing modal:", err);
+        }
+      } else {
+        console.error("[v0] Modal element not found in DOM");
+      }
+    }, 100);
   };
 
   // Fetch history from API

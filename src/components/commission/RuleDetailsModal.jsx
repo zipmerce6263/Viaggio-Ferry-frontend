@@ -12,12 +12,47 @@ export default function RuleDetailsModal({ ruleId, onClose }) {
   // Fetch rule details when ruleId changes
   useEffect(() => {
     if (ruleId) {
+      console.log("[v0] useEffect triggered with ruleId:", ruleId);
       fetchRuleDetails();
+    } else {
+      console.log("[v0] useEffect: ruleId is empty");
     }
   }, [ruleId]);
 
+  // Add event listeners for when modal is shown/hidden
+  useEffect(() => {
+    const modalElement = document.getElementById("ruleDetailsModal");
+    if (!modalElement) return;
+
+    const handleModalShow = () => {
+      console.log("[v0] Modal shown event, ruleId:", ruleId);
+      if (ruleId && !ruleData && !loading) {
+        console.log("[v0] Fetching details on modal show");
+        fetchRuleDetails();
+      }
+    };
+
+    const handleModalHide = () => {
+      console.log("[v0] Modal hidden event");
+      // Reset data when modal is hidden
+      setRuleData(null);
+      setError(null);
+    };
+
+    modalElement.addEventListener("shown.bs.modal", handleModalShow);
+    modalElement.addEventListener("hidden.bs.modal", handleModalHide);
+
+    return () => {
+      modalElement.removeEventListener("shown.bs.modal", handleModalShow);
+      modalElement.removeEventListener("hidden.bs.modal", handleModalHide);
+    };
+  }, [ruleId, ruleData, loading]);
+
   const fetchRuleDetails = async () => {
-    if (!ruleId) return;
+    if (!ruleId) {
+      console.log("[v0] No ruleId provided to fetchRuleDetails");
+      return;
+    }
 
     try {
       setLoading(true);
@@ -27,13 +62,24 @@ export default function RuleDetailsModal({ ruleId, onClose }) {
       const response = await commissionApi.getRuleById(ruleId);
       console.log("[v0] Rule details response:", response);
 
-      if (response.success && response.data) {
+      if (response && response.success && response.data) {
+        console.log("[v0] Setting rule data:", response.data);
+        setRuleData(response.data);
+      } else if (response && response.data) {
+        // Handle case where response doesn't have success flag but has data
+        console.log("[v0] Setting rule data (no success flag):", response.data);
         setRuleData(response.data);
       } else {
-        setError("Failed to load rule details");
+        console.error("[v0] Invalid response format:", response);
+        setError("Failed to load rule details - Invalid response format");
       }
     } catch (err) {
       console.error("[v0] Error fetching rule details:", err);
+      console.error("[v0] Error details:", {
+        message: err.message,
+        stack: err.stack,
+        ruleId: ruleId
+      });
       setError(err.message || "Error loading rule details");
     } finally {
       setLoading(false);
@@ -198,6 +244,9 @@ export default function RuleDetailsModal({ ruleId, onClose }) {
             {error && !loading && (
               <div className="alert alert-danger" role="alert">
                 <strong>Error!</strong> {error}
+                <div className="mt-2">
+                  <small className="text-muted">Rule ID: {ruleId}</small>
+                </div>
               </div>
             )}
 
