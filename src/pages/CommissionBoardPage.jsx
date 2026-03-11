@@ -326,6 +326,7 @@ import Can from "../components/Can";
 import CanDisable from "../components/CanDisable";
 import { commissionApi } from "../api/commissionApi";
 import Swal from "sweetalert2";
+import RuleDetailsModal from "../components/commission/RuleDetailsModal";
 
 /**
  * CommissionBoardPage
@@ -352,6 +353,9 @@ export default function CommissionBoardPage() {
   const [historyError, setHistoryError] = useState(null);
   const [selectedDateRange, setSelectedDateRange] = useState("last7days");
   const [selectedActionType, setSelectedActionType] = useState("");
+
+  // Rule Details Modal state
+  const [selectedRuleId, setSelectedRuleId] = useState(null);
 
   // Initial fetch on mount
   useEffect(() => {
@@ -412,6 +416,19 @@ export default function CommissionBoardPage() {
       setRules([]);
     } finally {
       setLoading(false);
+    }
+  };
+
+  // Open rule details modal
+  const openRuleDetails = (ruleId) => {
+    console.log("[v0] Opening rule details for ID:", ruleId);
+    setSelectedRuleId(ruleId);
+    
+    // Show modal
+    const modalElement = document.getElementById("ruleDetailsModal");
+    if (modalElement) {
+      const modal = new window.bootstrap.Modal(modalElement);
+      modal.show();
     }
   };
 
@@ -918,7 +935,16 @@ export default function CommissionBoardPage() {
                                     <span className="history-meta">
                                       By {item.createdBy?.name || item.createdBy?.email || "System"} • {formatHistoryDate(item.createdAt)}
                                     </span>
-                                    <a href="#" className="view-link">View Details</a>
+                                    <a 
+                                      href="#" 
+                                      className="view-link"
+                                      onClick={(e) => {
+                                        e.preventDefault();
+                                        openRuleDetails(item.ruleId);
+                                      }}
+                                    >
+                                      View Details
+                                    </a>
                                   </div>
                                 </div>
                               ))
@@ -941,6 +967,9 @@ export default function CommissionBoardPage() {
 
         </div>
       </PageWrapper>
+
+      {/* Rule Details Modal */}
+      <RuleDetailsModal ruleId={selectedRuleId} />
     </div>
   );
 }
