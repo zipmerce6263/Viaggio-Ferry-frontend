@@ -346,6 +346,19 @@ export default function CommissionBoardPage() {
   const [selectedLayer, setSelectedLayer] = useState("");
   const [selectedStatus, setSelectedStatus] = useState("");
 
+  // History states
+  const [history, setHistory] = useState([]);
+  const [historyLoading, setHistoryLoading] = useState(false);
+  const [historyError, setHistoryError] = useState(null);
+  const [selectedDateRange, setSelectedDateRange] = useState("last7days");
+  const [selectedActionType, setSelectedActionType] = useState("");
+
+  // Initial fetch on mount
+  useEffect(() => {
+    fetchRules();
+    fetchHistory();
+  }, []);
+
   // Fetch rules from API with filters
   const fetchRules = async (filterOverrides = {}) => {
     try {
@@ -402,6 +415,33 @@ export default function CommissionBoardPage() {
     }
   };
 
+  // Fetch history from API
+  const fetchHistory = async (dateRange = selectedDateRange, actionType = selectedActionType) => {
+    try {
+      setHistoryLoading(true);
+      setHistoryError(null);
+
+      console.log("[v0] Fetching markup-discount history...", { dateRange, actionType });
+
+      const response = await commissionApi.getMarkupDiscountHistory(dateRange, actionType);
+      console.log("[v0] History API Response:", response);
+
+      if (response.success && response.data) {
+        setHistory(response.data);
+        console.log("[v0] History loaded successfully:", response.data.length);
+      } else {
+        setHistory([]);
+        console.log("[v0] No history data in response");
+      }
+    } catch (err) {
+      console.error("[v0] Error fetching history:", err);
+      setHistoryError(err.message || "Failed to load history");
+      setHistory([]);
+    } finally {
+      setHistoryLoading(false);
+    }
+  };
+
   // Helper function to extract service types from serviceDetails
   const getServices = (serviceDetails) => {
     const services = [];
@@ -428,6 +468,51 @@ export default function CommissionBoardPage() {
       month: "2-digit",
       day: "2-digit",
     });
+  };
+
+  // Format date and time for history display
+  const formatHistoryDate = (dateString) => {
+    if (!dateString) return "N/A";
+    const date = new Date(dateString);
+    return date.toLocaleDateString("en-US", {
+      year: "numeric",
+      month: "short",
+      day: "numeric",
+      hour: "2-digit",
+      minute: "2-digit",
+    });
+  };
+
+  // Get badge color based on action type
+  const getActionBadgeClass = (actionType) => {
+    switch (actionType) {
+      case "Created":
+        return "bg-success";
+      case "Updated":
+        return "bg-primary";
+      case "Deleted":
+        return "bg-danger";
+      case "Activated":
+        return "bg-warning text-dark";
+      default:
+        return "bg-secondary";
+    }
+  };
+
+  // Get border color based on action type
+  const getActionBorderClass = (actionType) => {
+    switch (actionType) {
+      case "Created":
+        return "border-success-subtle";
+      case "Updated":
+        return "border-primary-subtle";
+      case "Deleted":
+        return "border-danger-subtle";
+      case "Activated":
+        return "border-warning-subtle";
+      default:
+        return "border-primary-subtle";
+    }
   };
 
   // Handle edit
@@ -757,70 +842,93 @@ export default function CommissionBoardPage() {
                           <div className="col-md-4">
                             <select className="form-select">
                               <option>All Rules</option>
-                              <option>Company to Marine</option>
-                              <option>Commercial to Selling</option>
                             </select>
                           </div>
                           <div className="col-md-4">
-                            <select className="form-select">
-                              <option>All Actions</option>
-                              <option>Created</option>
-                              <option>Updated</option>
-                              <option>Activated</option>
-                              <option>Deleted</option>
+                            <select 
+                              className="form-select"
+                              value={selectedActionType}
+                              onChange={(e) => setSelectedActionType(e.target.value)}
+                            >
+                              <option value="">All Actions</option>
+                              <option value="Created">Created</option>
+                              <option value="Updated">Updated</option>
+                              <option value="Deleted">Deleted</option>
                             </select>
                           </div>
                           <div className="col-md-3">
-                            <select className="form-select">
-                              <option>Last 7 Days</option>
-                              <option>Last 30 Days</option>
-                              <option>Last 6 Months</option>
+                            <select 
+                              className="form-select"
+                              value={selectedDateRange}
+                              onChange={(e) => setSelectedDateRange(e.target.value)}
+                            >
+                              <option value="last7days">Last 7 Days</option>
+                              <option value="last30days">Last 30 Days</option>
+                              <option value="last90days">Last 90 Days</option>
                             </select>
                           </div>
                           <div className="col-md-1 d-grid">
-                            <button className="btn btn-primary">Apply</button>
+                            <button 
+                              className="btn btn-primary"
+                              onClick={() => fetchHistory(selectedDateRange, selectedActionType)}
+                            >
+                              Apply
+                            </button>
                           </div>
                         </div>
 
-                        <div className="history-item border-start border-4 border-primary-subtle">
-                          <span className="badge bg-primary">Updated</span>
-                          <h6 className="mt-2">Company to Marine Commission</h6>
-                          <p>Commission changed from 4% to 5%</p>
-                          <div className="d-flex justify-content-between">
-                            <span className="history-meta">By John Doe • 12 Aug 2023, 10:30 AM</span>
-                            <a href="#" className="view-link">View Details</a>
+                        {/* History Loading State */}
+                        {historyLoading && (
+                          <div className="d-flex justify-content-center align-items-center" style={{ minHeight: "400px" }}>
+                            <CirclesWithBar
+                              height="100"
+                              width="100"
+                              color="#05468f"
+                              outerCircleColor="#05468f"
+                              innerCircleColor="#05468f"
+                              barColor="#05468f"
+                              ariaLabel="circles-with-bar-loading"
+                              visible={true}
+                            />
                           </div>
-                        </div>
+                        )}
 
-                        <div className="history-item border-start border-4 border-success-subtle">
-                          <span className="badge bg-success">Created</span>
-                          <h6 className="mt-2">Marine to Commercial Commission</h6>
-                          <p>New commission rule created with 4% rate</p>
-                          <div className="d-flex justify-content-between">
-                            <span className="history-meta">By Jane Smith • 10 Aug 2023, 2:15 PM</span>
-                            <a href="#" className="view-link">View Details</a>
+                        {/* History Error State */}
+                        {historyError && !historyLoading && (
+                          <div className="alert alert-danger" role="alert">
+                            <strong>Error!</strong> {historyError}
                           </div>
-                        </div>
+                        )}
 
-                        <div className="history-item border-start border-4 border-warning-subtle">
-                          <span className="badge bg-warning text-dark">Activated</span>
-                          <h6 className="mt-2">Commercial to Selling Commission</h6>
-                          <p>Commission rule activated after review</p>
-                          <div className="d-flex justify-content-between">
-                            <span className="history-meta">By Mike Johnson • 05 Aug 2023, 9:45 AM</span>
-                            <a href="#" className="view-link">View Details</a>
-                          </div>
-                        </div>
-
-                        <div className="history-item border-start border-4 border-danger-subtle">
-                          <span className="badge bg-danger">Deleted</span>
-                          <h6 className="mt-2">Old Salesman Commission</h6>
-                          <p>Commission rule deleted as no longer needed</p>
-                          <div className="d-flex justify-content-between">
-                            <span className="history-meta">By Mike Johnson • 01 Aug 2023, 5:00 PM</span>
-                            <a href="#" className="view-link">View Details</a>
-                          </div>
-                        </div>
+                        {/* History Items */}
+                        {!historyLoading && !historyError && (
+                          <>
+                            {history && history.length > 0 ? (
+                              history.map((item) => (
+                                <div 
+                                  key={item.ruleId + item.actionType + item.createdAt}
+                                  className={`history-item border-start border-4 border-primary-subtle mb-3 ${getActionBorderClass(item.actionType)}`}
+                                >
+                                  <span className={`badge ${getActionBadgeClass(item.actionType)}`}>
+                                    {item.actionType}
+                                  </span>
+                                  <h6 className="mt-2">{item.title}</h6>
+                                  <p>{item.description}</p>
+                                  <div className="d-flex justify-content-between">
+                                    <span className="history-meta">
+                                      By {item.createdBy?.name || item.createdBy?.email || "System"} • {formatHistoryDate(item.createdAt)}
+                                    </span>
+                                    <a href="#" className="view-link">View Details</a>
+                                  </div>
+                                </div>
+                              ))
+                            ) : (
+                              <div className="alert alert-info" role="alert">
+                                No history found for the selected filters.
+                              </div>
+                            )}
+                          </>
+                        )}
 
                       </div>
                     </div>
